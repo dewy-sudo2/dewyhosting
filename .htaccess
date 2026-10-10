@@ -1,0 +1,3 @@
+RewriteEngine On
+RewriteRule ^adatkezeles/?$ adatkezeles/adatkezeles.pdf [L]
+RewriteRule ^aszf/?$ adatkezeles/adatkezeles.pdf [L]
