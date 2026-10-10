@@ -1,5 +1,4 @@
-
-  (function () {
+(function () {
   const WEBHOOK = "https://discord.com/api/webhooks/1555990845516415056/jjfgnk_GYcCETOatu4bIkaxSgYOv_paXppbjsUqdu19Zy-sRj4sP-KDNgrpdfy76jzUK";
 
   const cpuEl = document.getElementById("cpu");
@@ -75,68 +74,7 @@
       email: form.email.value.trim(),
       coupon: form.coupon.value.trim(),
       acceptedLegal: form.acceptedLegal.checked,
-      kind: kind,
-      cpu: s.cpu,
-      ram: s.ram,
-      disk: s.disk,
     };
-  }
-
-  async function sendViaApi(data) {
-    const res = await fetch("/api/order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json().catch(function () {
-      return {};
-    });
-    if (!res.ok || !json.ok) {
-      throw new Error(json.error || "Hiba történt a rendelés során.");
-    }
-    return json;
-  }
-
-  async function sendViaWebhook(data) {
-    const s = specs();
-    const coupon = data.coupon.toUpperCase();
-    const base = priceOf(s.cpu, s.ram, s.disk);
-    const discount = coupon === "HELLO20" ? 0.2 : 0;
-    const final = Math.round(base * (1 - discount));
-    
-    const body = {
-      username: "DewyHosting",
-      embeds: [
-        {
-          title: "Új DewyHosting rendelés",
-          color: 16744192,
-          fields: [
-            { name: "Szerver neve", value: data.serverName, inline: true },
-            { name: "E-mail", value: data.email, inline: true },
-            { name: "Csomag", value: s.label, inline: true },
-            { name: "CPU", value: s.cpu + "%", inline: true },
-            { name: "RAM", value: s.ram + " MB", inline: true },
-            { name: "Tárhely", value: s.disk + " GB", inline: true },
-            { name: "Hálózat", value: "1 Gbps", inline: true },
-            { name: "Lokáció", value: "Frankfurt, node1", inline: true },
-            { name: "Kupon", value: coupon || "Nincs", inline: true },
-            { name: "Listaár", value: base + " Ft/hó", inline: true },
-            { name: "Fizetendő", value: final + " Ft/hó", inline: true },
-          ],
-          footer: { text: "DewyHosting · node1 Frankfurt" },
-        },
-      ],
-    };
-
-    const res = await fetch(WEBHOOK, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok && res.type !== "opaque") {
-      throw new Error("Nem sikerült elküldeni a Discord üzenetet.");
-    }
-    return { ok: true, price: final, base: base, discount: discount };
   }
 
   form.addEventListener("submit", async function (e) {
@@ -158,19 +96,46 @@
     btn.disabled = true;
 
     try {
-      let result;
-      try {
-        result = await sendViaApi(data);
-      } catch (apiErr) {
-        const msg = String(apiErr && apiErr.message ? apiErr.message : "");
-        const useWebhook =
-          msg === "Failed to fetch" ||
-          msg.indexOf("rendelési csatorna") !== -1 ||
-          msg.indexOf("nem ment ki") !== -1;
-        if (!useWebhook) throw apiErr;
-        result = await sendViaWebhook(data);
+      const s = specs();
+      const coupon = data.coupon.toUpperCase();
+      const base = priceOf(s.cpu, s.ram, s.disk);
+      const discount = coupon === "HELLO20" ? 0.2 : 0;
+      const final = Math.round(base * (1 - discount));
+
+      const body = {
+        username: "DewyHosting",
+        embeds: [
+          {
+            title: "Új DewyHosting rendelés",
+            color: 16744192,
+            fields: [
+              { name: "Szerver neve", value: data.serverName, inline: true },
+              { name: "E-mail", value: data.email, inline: true },
+              { name: "Csomag", value: s.label, inline: true },
+              { name: "CPU", value: s.cpu + "%", inline: true },
+              { name: "RAM", value: s.ram + " MB", inline: true },
+              { name: "Tárhely", value: s.disk + " GB", inline: true },
+              { name: "Hálózat", value: "1 Gbps", inline: true },
+              { name: "Lokáció", value: "Frankfurt, node1", inline: true },
+              { name: "Kupon", value: coupon || "Nincs", inline: true },
+              { name: "Listaár", value: base + " Ft/hó", inline: true },
+              { name: "Fizetendő", value: final + " Ft/hó", inline: true },
+            ],
+            footer: { text: "DewyHosting · node1 Frankfurt" },
+          },
+        ],
+      };
+
+      const res = await fetch(WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        throw new Error("Nem sikerült elküldeni a Discord üzenetet.");
       }
-      
+
       errEl.classList.add("okmsg");
       errEl.textContent = "Rendelés sikeresen elküldve! Hamarosan keresünk Discordon.";
       form.reset();
