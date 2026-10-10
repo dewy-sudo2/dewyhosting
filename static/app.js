@@ -1,6 +1,6 @@
-(function () {
-  const WEBHOOK =
-    "https://discord.com/api/webhooks/1555990845516415056/jjfgnk_GYcCETOatu4bIkaxSgYOv_paXppbjsUqdu19Zy-sRj4sP-KDNgrpdfy76jzUK";
+
+  (function () {
+  const WEBHOOK = "https://discord.com/api/webhooks/1555990845516415056/jjfgnk_GYcCETOatu4bIkaxSgYOv_paXppbjsUqdu19Zy-sRj4sP-KDNgrpdfy76jzUK";
 
   const cpuEl = document.getElementById("cpu");
   const ramEl = document.getElementById("ram");
@@ -34,7 +34,7 @@
     const base = priceOf(cpu, ram, disk);
     document.getElementById("customPrice").textContent = String(base);
     document.getElementById("helloHint").innerHTML =
-      "HELLO20-szal az első rendelés: <strong>" + Math.round(base * 0.8) + " Ft / hó</strong>";
+      "HELLO20 kuponnal az első hónap: <strong>" + Math.round(base * 0.8) + " Ft</strong>";
   }
 
   cpuEl.addEventListener("input", refreshCustom);
@@ -48,7 +48,7 @@
     const base = priceOf(s.cpu, s.ram, s.disk);
     document.getElementById("orderTitle").textContent = s.label + " rendelése";
     document.getElementById("orderHint").textContent =
-      s.cpu + "% CPU · " + s.ram + " MB RAM · " + s.disk + " GB · 1 Gbps · Frankfurt · listaár " + base + " Ft/hó";
+      s.cpu + "% CPU · " + s.ram + " MB RAM · " + s.disk + " GB tárhely · Frankfurt · Alapár: " + base + " Ft/hó";
     errEl.textContent = "";
     errEl.classList.remove("okmsg");
     modal.classList.add("open");
@@ -92,7 +92,7 @@
       return {};
     });
     if (!res.ok || !json.ok) {
-      throw new Error(json.error || "A rendelés nem ment ki.");
+      throw new Error(json.error || "Hiba történt a rendelés során.");
     }
     return json;
   }
@@ -103,6 +103,7 @@
     const base = priceOf(s.cpu, s.ram, s.disk);
     const discount = coupon === "HELLO20" ? 0.2 : 0;
     const final = Math.round(base * (1 - discount));
+    
     const body = {
       username: "DewyHosting",
       embeds: [
@@ -118,21 +119,22 @@
             { name: "Tárhely", value: s.disk + " GB", inline: true },
             { name: "Hálózat", value: "1 Gbps", inline: true },
             { name: "Lokáció", value: "Frankfurt, node1", inline: true },
-            { name: "Kupon", value: coupon || "—", inline: true },
+            { name: "Kupon", value: coupon || "Nincs", inline: true },
             { name: "Listaár", value: base + " Ft/hó", inline: true },
             { name: "Fizetendő", value: final + " Ft/hó", inline: true },
           ],
-          footer: { text: "DewyHosting · hobbi projekt · Németország, Frankfurt" },
+          footer: { text: "DewyHosting · node1 Frankfurt" },
         },
       ],
     };
+
     const res = await fetch(WEBHOOK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (!res.ok && res.type !== "opaque") {
-      throw new Error("A Discord értesítés nem ment ki.");
+      throw new Error("Nem sikerült elküldeni a Discord üzenetet.");
     }
     return { ok: true, price: final, base: base, discount: discount };
   }
@@ -141,17 +143,20 @@
     e.preventDefault();
     errEl.classList.remove("okmsg");
     errEl.textContent = "";
+    
     const data = payloadFromForm();
     if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{1,31}$/.test(data.serverName)) {
-      errEl.textContent = "A szerver neve 2–32 karakter: betű, szám, _ vagy -.";
+      errEl.textContent = "A szerver neve 2-32 karakter lehet (betű, szám, aláhúzás vagy kötőjel).";
       return;
     }
     if (!data.acceptedLegal) {
       errEl.textContent = "Az adatkezelési tájékoztató elfogadása kötelező.";
       return;
     }
+
     const btn = form.querySelector('button[type="submit"]');
     btn.disabled = true;
+
     try {
       let result;
       try {
@@ -160,17 +165,17 @@
         const msg = String(apiErr && apiErr.message ? apiErr.message : "");
         const useWebhook =
           msg === "Failed to fetch" ||
-          msg.indexOf("A rendelési csatorna") !== -1 ||
+          msg.indexOf("rendelési csatorna") !== -1 ||
           msg.indexOf("nem ment ki") !== -1;
         if (!useWebhook) throw apiErr;
         result = await sendViaWebhook(data);
       }
+      
       errEl.classList.add("okmsg");
-      errEl.textContent =
-        "Rendelés elküldve. Tájékoztató ár: " + result.price + " Ft/hó. Discordon jelezzük a folytatást.";
+      errEl.textContent = "Rendelés sikeresen elküldve! Hamarosan keresünk Discordon.";
       form.reset();
     } catch (err) {
-      errEl.textContent = err.message || "Nem sikerült elküldeni.";
+      errEl.textContent = err.message || "Hiba történt a küldés közben.";
     } finally {
       btn.disabled = false;
     }
